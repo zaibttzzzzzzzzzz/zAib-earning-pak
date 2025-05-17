@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pak Earn PKR</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .task-timer { height: 5px; background: #eee; margin-top: 10px; }
+        .timer-progress { width: 0%; height: 100%; background: green; transition: width 1s linear; }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Existing Auth/Dashboard Code -->
+
+    <!-- Admin Panel (Hidden by Default) -->
+    <div id="adminPanel" style="display:none; position:fixed; top:20px; right:20px; background:white; padding:20px; box-shadow:0 0 10px #ddd; z-index:1000;">
+        <h5>Admin Controls 🔒</h5>
+        <input type="password" id="adminPass" class="form-control mb-2" placeholder="Admin Password">
+        <button onclick="verifyAdmin()" class="btn btn-dark btn-sm">Unlock</button>
+        
+        <div id="adminControls" style="display:none;">
+            <hr>
+            <h6>Add New Task</h6>
+            <input type="text" id="taskName" class="form-control mb-2" placeholder="Task Name">
+            <input type="number" id="taskDuration" class="form-control mb-2" placeholder="Duration (Seconds)">
+            <input type="number" id="taskReward" class="form-control mb-2" placeholder="Reward (PKR)">
+            <button onclick="addNewTask()" class="btn btn-success btn-sm">Add Task</button>
+        </div>
+    </div>
+
+<script>
+// Modified Task System with Real Timer
+let currentTaskInterval = null;
+
+function startTask(button, duration, reward) {
+    if(currentTaskInterval) {
+        alert("Pehle current task complete karein!");
+        return;
+    }
+
+    const timerBar = document.createElement('div');
+    timerBar.className = 'task-timer';
+    const timerProgress = document.createElement('div');
+    timerProgress.className = 'timer-progress';
+    timerBar.appendChild(timerProgress);
+    button.parentElement.appendChild(timerBar);
+
+    button.disabled = true;
+    let secondsLeft = duration;
+    
+    // Store task in localStorage
+    localStorage.setItem('currentTask', JSON.stringify({
+        endTime: Date.now() + (duration * 1000),
+        reward: reward
+    }));
+
+    currentTaskInterval = setInterval(() => {
+        secondsLeft--;
+        const progressPercent = 100 - ((secondsLeft / duration) * 100);
+        timerProgress.style.width = progressPercent + '%';
+
+        if(secondsLeft <= 0) {
+            clearInterval(currentTaskInterval);
+            currentTaskInterval = null;
+            currentUser.balance += reward;
+            localStorage.setItem('pakearn_users', JSON.stringify(users));
+            document.getElementById('currentBalance').textContent = currentUser.balance;
+            button.innerHTML = 'Completed!';
+            localStorage.removeItem('currentTask');
+        }
+    }, 1000);
+
+    // Prevent closing tab
+    window.onbeforeunload = function() {
+        if(currentTaskInterval) {
+            localStorage.removeItem('currentTask');
+            return "Task cancel ho jayega! Kya pakka band karna hai?";
+        }
+    };
+}
+
+// Admin Control System
+function verifyAdmin() {
+    if(document.getElementById('adminPass').value === "admin123") { // Default password
+        document.getElementById('adminControls').style.display = 'block';
+    }
+}
+
+function addNewTask() {
+    const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    
+    tasks.push({
+        name: document.getElementById('taskName').value,
+        duration: parseInt(document.getElementById('taskDuration').value),
+        reward: parseInt(document.getElementById('taskReward').value)
+    });
+
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    loadTasks(); // Refresh task list
+}
+
+function loadTasks() {
+    const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    document.getElementById('taskList').innerHTML = tasks.map((task, index) => `
+        <div class="task-card">
+            <h5>${task.name}</h5>
+            <p>Duration: ${task.duration}s | Earnings: ${task.reward} PKR</p>
+            <button class="btn btn-success" 
+                onclick="startTask(this, ${task.duration}, ${task.reard})">
+                Start Task
+            </button>
+        </div>
+    `).join('');
+}
+
+// On Page Load
+window.onload = function() {
+    const savedTask = localStorage.getItem('currentTask');
+    if(savedTask) {
+        const task = JSON.parse(savedTask);
+        const timeLeft = Math.round((task.endTime - Date.now()) / 1000);
+        
+        if(timeLeft > 0) {
+            startTask(/* parameters */); 
+        } else {
+            localStorage.removeItem('currentTask');
+        }
+    }
+    loadTasks();
+}
+</script>
+</body>
+</html>
